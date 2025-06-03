@@ -1,172 +1,90 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, request, jsonify, render_template
+from predict_delivery import DeliveryPredictor
 import pandas as pd
-import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.preprocessing import StandardScaler
 import json
+import traceback
 
 app = Flask(__name__)
+predictor = DeliveryPredictor()
 
-# Global variables to store the model and scaler
-model = None
-scaler = None
-
-def clean_numeric_value(value):
-    """Clean numeric values from the dataset"""
-    if pd.isna(value) or value == '-' or value == 'NEW':
-        return np.nan
-    if isinstance(value, str):
-        value = value.replace('₹', '').replace(',', '')
-        numeric_part = value.split()[0] if value else ''
-        try:
-            return float(numeric_part)
-        except (ValueError, TypeError):
-            return np.nan
+@app.route('/')
+def index():
     try:
-        return float(value)
-    except (ValueError, TypeError):
-        return np.nan
-
-def clean_data(df):
-    """Clean and preprocess the dataset"""
-    print("Cleaning data...")
-    
-    # Clean numeric columns
-    df['Average_Cost'] = df['Average_Cost'].apply(clean_numeric_value)
-    df['Minimum_Order'] = df['Minimum_Order'].apply(clean_numeric_value)
-    df['Rating'] = df['Rating'].apply(clean_numeric_value)
-    df['Votes'] = df['Votes'].apply(clean_numeric_value)
-    df['Reviews'] = df['Reviews'].apply(clean_numeric_value)
-    
-    # Extract numeric delivery time
-    df['Delivery_Time'] = df['Delivery_Time'].apply(lambda x: float(x.split()[0]) if isinstance(x, str) else np.nan)
-    
-    # Fill missing values
-    df['Average_Cost'] = df['Average_Cost'].fillna(df['Average_Cost'].median())
-    df['Minimum_Order'] = df['Minimum_Order'].fillna(df['Minimum_Order'].median())
-    df['Rating'] = df['Rating'].fillna(df['Rating'].median())
-    df['Votes'] = df['Votes'].fillna(df['Votes'].median())
-    df['Reviews'] = df['Reviews'].fillna(df['Reviews'].median())
-    
-    return df
-
-def train_model(X, y):
-    """Train the model and prepare for predictions"""
-    global model, scaler
-    
-    # Prepare numeric features
-    numeric_features = ['Average_Cost', 'Minimum_Order', 'Rating', 'Votes', 'Reviews']
-    X_numeric = X[numeric_features].copy()
-    
-    # Scale numeric features
-    scaler = StandardScaler()
-    X_numeric_scaled = scaler.fit_transform(X_numeric)
-    
-    # Train model
-    model = GradientBoostingRegressor(random_state=42)
-    model.fit(X_numeric_scaled, y)
-    
-    return analyze_feature_importance(X, y)
-
-def analyze_feature_importance(X, y):
-    """Analyze feature importance using the trained model"""
-    print("\nAnalyzing feature importance...")
-    
-    # Prepare numeric features
-    numeric_features = ['Average_Cost', 'Minimum_Order', 'Rating', 'Votes', 'Reviews']
-    X_numeric = X[numeric_features].copy()
-    
-    # Get feature importance
-    importance = model.feature_importances_
-    
-    # Create feature importance dictionary
-    feature_importance = {
-        'numeric': dict(zip(numeric_features, importance.tolist())),
-        'correlations': X_numeric.corrwith(y).to_dict()
-    }
-    
-    return feature_importance
+        # Get unique cities from the dataset
+        cities = sorted(pd.read_csv('data/code.csv')['Location'].str.split(',').str[-1].str.strip().unique())
+        
+        # Get unique cuisines
+        all_cuisines = []
+        cuisines_data = pd.read_csv('data/code.csv')['Cuisines'].str.split(',')
+        for cuisines in cuisines_data:
+            if isinstance(cuisines, list):
+                all_cuisines.extend([c.strip() for c in cuisines])
+        unique_cuisines = sorted(list(set(all_cuisines)))
+        
+        return render_template('index.html', 
+                             cities=cities if len(cities) > 0 else [],
+                             cuisines=unique_cuisines if len(unique_cuisines) > 0 else [])
+    except Exception as e:
+        print(f"Error in index route: {str(e)}")
+        print(traceback.format_exc())
+        return render_template('index.html', cities=[], cuisines=[])
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.json
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
         
-        # Create input array
-        input_data = np.array([[
-            float(data['average_cost']),
-            float(data['minimum_order']),
-            float(data['rating']),
-            float(data['votes']),
-            float(data['reviews'])
-        ]])
+        required_fields = ['location', 'cuisines', 'average_cost', 'minimum_order', 
+                         'rating', 'votes', 'reviews']
         
-        # Scale the input
-        input_scaled = scaler.transform(input_data)
+        # Check for missing fields
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
+        
+        # Validate numeric fields
+        try:
+            input_data = {
+                'Location': str(data['location']),
+                'Cuisines': str(data['cuisines']),
+                'Average_Cost': float(data['average_cost']),
+                'Minimum_Order': float(data['minimum_order']),
+                'Rating': float(data['rating']),
+                'Votes': int(data['votes']),
+                'Reviews': int(data['reviews'])
+            }
+        except ValueError as e:
+            return jsonify({'error': f'Invalid numeric value: {str(e)}'}), 400
+        
+        # Validate ranges
+        if not (1 <= input_data['Rating'] <= 5):
+            return jsonify({'error': 'Rating must be between 1 and 5'}), 400
+        if input_data['Average_Cost'] < 0 or input_data['Minimum_Order'] < 0:
+            return jsonify({'error': 'Cost values cannot be negative'}), 400
+        if input_data['Votes'] < 0 or input_data['Reviews'] < 0:
+            return jsonify({'error': 'Votes and Reviews cannot be negative'}), 400
         
         # Make prediction
-        prediction = model.predict(input_scaled)[0]
-        
-        return jsonify({
-            'success': True,
-            'predicted_time': round(prediction, 1)
-        })
+        try:
+            prediction = predictor.predict(input_data)
+            if not prediction or 'predicted_time' not in prediction:
+                return jsonify({'error': 'Invalid prediction result'}), 500
+            
+            return jsonify({
+                'predicted_time': prediction['predicted_time']
+            })
+            
+        except Exception as e:
+            print(f"Prediction error: {str(e)}")
+            print(traceback.format_exc())
+            return jsonify({'error': 'Error making prediction'}), 500
+    
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-
-@app.route('/')
-def index():
-    # Load and process data
-    df = pd.read_csv('data/code.csv')
-    df = clean_data(df)
-    
-    # Prepare features and target
-    X = df[['Average_Cost', 'Minimum_Order', 'Rating', 'Votes', 'Reviews']]
-    y = df['Delivery_Time']
-    
-    # Remove rows with missing target values
-    mask = ~y.isna()
-    X = X[mask]
-    y = y[mask]
-    
-    # Train model and get feature importance
-    importance_data = train_model(X, y)
-    
-    # Get feature ranges for the form
-    feature_ranges = {
-        'average_cost': {
-            'min': int(X['Average_Cost'].min()),
-            'max': int(X['Average_Cost'].max()),
-            'median': int(X['Average_Cost'].median())
-        },
-        'minimum_order': {
-            'min': int(X['Minimum_Order'].min()),
-            'max': int(X['Minimum_Order'].max()),
-            'median': int(X['Minimum_Order'].median())
-        },
-        'rating': {
-            'min': round(X['Rating'].min(), 1),
-            'max': round(X['Rating'].max(), 1),
-            'median': round(X['Rating'].median(), 1)
-        },
-        'votes': {
-            'min': int(X['Votes'].min()),
-            'max': int(X['Votes'].max()),
-            'median': int(X['Votes'].median())
-        },
-        'reviews': {
-            'min': int(X['Reviews'].min()),
-            'max': int(X['Reviews'].max()),
-            'median': int(X['Reviews'].median())
-        }
-    }
-    
-    return render_template('index.html', 
-                         importance_data=json.dumps(importance_data),
-                         feature_ranges=feature_ranges)
+        print(f"Error in predict route: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000) 
+    app.run(debug=True) 

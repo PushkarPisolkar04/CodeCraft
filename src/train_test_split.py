@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import GradientBoostingRegressor
@@ -13,9 +13,9 @@ def clean_numeric_value(value):
     if pd.isna(value) or value == '-' or value == 'NEW':
         return np.nan
     if isinstance(value, str):
-        # Remove ₹ symbol and commas, convert to float
+        # Remove ₹ symbol and commas
         value = value.replace('₹', '').replace(',', '')
-        # Extract numeric part from strings like "30 minutes"
+        # Extract numeric part
         numeric_part = re.search(r'\d+', value)
         if numeric_part:
             return float(numeric_part.group())
@@ -60,72 +60,110 @@ def create_preprocessing_pipeline():
     
     return preprocessor
 
+def preprocess_data(df):
+    # Clean monetary values
+    df['Average_Cost'] = df['Average_Cost'].apply(clean_numeric_value)
+    df['Minimum_Order'] = df['Minimum_Order'].apply(clean_numeric_value)
+    
+    # Clean and convert Delivery_Time to minutes
+    df['Delivery_Time'] = df['Delivery_Time'].str.extract('(\d+)').astype(float)
+    
+    # Create delivery time categories
+    df['Delivery_Category'] = pd.cut(df['Delivery_Time'], 
+                                   bins=[0, 30, 45, float('inf')],
+                                   labels=['Fast (≤30 mins)', 'Medium (31-45 mins)', 'Slow (>45 mins)'])
+    
+    # Handle missing values
+    df['Rating'] = pd.to_numeric(df['Rating'], errors='coerce')
+    df['Votes'] = pd.to_numeric(df['Votes'], errors='coerce')
+    df['Reviews'] = pd.to_numeric(df['Reviews'], errors='coerce')
+    
+    # Fill missing values
+    df['Average_Cost'].fillna(df['Average_Cost'].median(), inplace=True)
+    df['Minimum_Order'].fillna(df['Minimum_Order'].median(), inplace=True)
+    df['Rating'].fillna(df['Rating'].median(), inplace=True)
+    df['Votes'].fillna(0, inplace=True)
+    df['Reviews'].fillna(0, inplace=True)
+    
+    # Extract city from Location
+    df['City'] = df['Location'].apply(lambda x: x.split(',')[-1].strip() if isinstance(x, str) else 'Unknown')
+    
+    # Process cuisines
+    df['Cuisine_Count'] = df['Cuisines'].str.count(',') + 1
+    df['Has_North_Indian'] = df['Cuisines'].str.contains('North Indian', case=False, na=False).astype(int)
+    df['Has_South_Indian'] = df['Cuisines'].str.contains('South Indian', case=False, na=False).astype(int)
+    df['Has_Chinese'] = df['Cuisines'].str.contains('Chinese', case=False, na=False).astype(int)
+    df['Has_Fast_Food'] = df['Cuisines'].str.contains('Fast Food', case=False, na=False).astype(int)
+    
+    # Create price category
+    df['Price_Category'] = pd.qcut(df['Average_Cost'], q=3, labels=['Budget', 'Mid-range', 'Premium'])
+    
+    # Drop original columns that won't be used in modeling
+    columns_to_drop = ['Restaurant', 'Delivery_Time', 'Location', 'Cuisines']
+    df = df.drop(columns_to_drop, axis=1)
+    
+    return df
+
+def encode_and_scale_features(df, scaler=None, encoders=None, is_training=True):
+    # Separate features that need different encoding
+    categorical_cols = ['City', 'Price_Category', 'Delivery_Category']
+    numerical_cols = ['Average_Cost', 'Minimum_Order', 'Rating', 'Votes', 'Reviews', 
+                     'Cuisine_Count', 'Has_North_Indian', 'Has_South_Indian', 
+                     'Has_Chinese', 'Has_Fast_Food']
+    
+    if is_training:
+        # Initialize encoders and scaler
+        encoders = {col: LabelEncoder() for col in categorical_cols}
+        scaler = StandardScaler()
+        
+        # Fit and transform
+        for col in categorical_cols[:-1]:  # Exclude target variable
+            df[col] = encoders[col].fit_transform(df[col])
+        
+        df[numerical_cols] = scaler.fit_transform(df[numerical_cols])
+        
+        return df, scaler, encoders
+    else:
+        # Transform using pre-fit encoders and scaler
+        for col in categorical_cols[:-1]:  # Exclude target variable
+            df[col] = encoders[col].transform(df[col])
+        
+        df[numerical_cols] = scaler.transform(df[numerical_cols])
+        
+        return df
+
 def main():
-    # Load and clean data
     print("Loading and cleaning data...")
+    # Read the data
     df = pd.read_csv('data/code.csv')
-    df = clean_data(df)
     
-    # Prepare features and target
-    X = df[['Location', 'Cuisines', 'Average_Cost_for_Two', 'Rating', 'Votes', 'Reviews']]
-    y = df['Delivery_Time']
+    # Preprocess the data
+    df = preprocess_data(df)
     
-    # Remove rows with missing target values
-    mask = ~y.isna()
-    X = X[mask]
-    y = y[mask]
+    print("Splitting features and target...")
+    # Split features and target
+    X = df.drop('Delivery_Category', axis=1)
+    y = df['Delivery_Category']
     
-    # Split the data into training and testing sets
-    print("Splitting data into train and test sets...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    print("Splitting into train and test sets...")
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    # Save train and test datasets
-    print("Saving train and test datasets...")
-    train_df = pd.concat([X_train, y_train.rename('Delivery_Time')], axis=1)
-    test_df = pd.concat([X_test, y_test.rename('Delivery_Time')], axis=1)
+    print("Encoding and scaling features...")
+    # Encode and scale features
+    X_train, scaler, encoders = encode_and_scale_features(X_train, is_training=True)
+    X_test = encode_and_scale_features(X_test, scaler, encoders, is_training=False)
     
-    train_df.to_csv('data/train.csv', index=False)
-    test_df.to_csv('data/test.csv', index=False)
+    print("Saving processed data...")
+    # Save the processed data
+    pd.concat([X_train, y_train], axis=1).to_csv('data/train.csv', index=False)
+    pd.concat([X_test, y_test], axis=1).to_csv('data/test.csv', index=False)
     
-    # Create and train the model pipeline
-    print("Training the model...")
-    preprocessor = create_preprocessing_pipeline()
-    model = Pipeline([
-        ('preprocessor', preprocessor),
-        ('regressor', GradientBoostingRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=3,
-            random_state=42
-        ))
-    ])
+    # Save the scaler and encoders
+    joblib.dump(scaler, 'models/scaler.joblib')
+    joblib.dump(encoders, 'models/encoders.joblib')
     
-    # Fit the model
-    model.fit(X_train, y_train)
-    
-    # Save the model and preprocessor
-    print("Saving model and preprocessor...")
-    joblib.dump(model, 'data/model.pkl')
-    joblib.dump(preprocessor, 'data/preprocessor.pkl')
-    
-    # Calculate and display metrics
-    y_pred = model.predict(X_test)
-    mae = np.mean(np.abs(y_test - y_pred))
-    rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
-    accuracy = 100 * (1 - mae / np.mean(y_test))
-    
-    print("\nModel Performance Metrics on Test Set:")
-    print(f"- Accuracy: {accuracy:.2f}%")
-    print(f"- Mean Absolute Error: {mae:.2f} minutes")
-    print(f"- Root Mean Square Error: {rmse:.2f} minutes")
-    
-    # Print dataset sizes
-    print("\nDataset Sizes:")
-    print(f"- Total samples: {len(df)}")
-    print(f"- Training samples: {len(X_train)}")
-    print(f"- Testing samples: {len(X_test)}")
+    print("Data preprocessing completed!")
 
 if __name__ == "__main__":
     main() 

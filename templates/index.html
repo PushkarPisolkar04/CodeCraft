@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Food Delivery Time Predictor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .form-control {
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+        }
+        select[multiple] {
+            height: 200px;
+        }
+        .prediction-result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .prediction-result h4 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .alert-info {
+            background-color: #e3f2fd;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .model-predictions {
+            margin-top: 20px;
+        }
+        .model-predictions table {
+            background-color: white;
+            border-radius: 6px;
+        }
+        .model-predictions th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            padding: 12px;
+        }
+        .model-predictions td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+        .input-row {
+            margin-bottom: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-4">Food Delivery Time Predictor</h2>
+        <form id="predictionForm">
+            <div class="input-row">
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <select class="form-control" id="location" name="location" required>
+                        <option value="">Select location...</option>
+                        <option value="BTM Layout 1, Electronic City">BTM Layout 1, Electronic City</option>
+                        <option value="Babarpur, New Delhi, Delhi">Babarpur, New Delhi, Delhi</option>
+                        <option value="Chandni Chowk, Kolkata">Chandni Chowk, Kolkata</option>
+                        <option value="Chatta Bazaar, Malakpet, Hyderabad">Chatta Bazaar, Malakpet, Hyderabad</option>
+                        <option value="D-Block, Sector 63, Noida">D-Block, Sector 63, Noida</option>
+                        <option value="Delhi Administration Flats, Timarpur">Delhi Administration Flats, Timarpur</option>
+                        <option value="Delhi Cantt.">Delhi Cantt.</option>
+                        <option value="Delhi High Court, India Gate">Delhi High Court, India Gate</option>
+                        <option value="Delhi University-GTB Nagar">Delhi University-GTB Nagar</option>
+                        <option value="Dockyard Road, Mumbai CST Area">Dockyard Road, Mumbai CST Area</option>
+                        <option value="FTI College, Law College Road, Pune">FTI College, Law College Road, Pune</option>
+                        <option value="Gora Bazar, Rajbari, North Dumdum, Kolkata">Gora Bazar, Rajbari, North Dumdum, Kolkata</option>
+                        <option value="Laxman Vihar Industrial Area, Sector 3A, Gurgoan">Laxman Vihar Industrial Area, Sector 3A, Gurgoan</option>
+                        <option value="MG Road, Pune">MG Road, Pune</option>
+                        <option value="Majestic">Majestic</option>
+                        <option value="Mico Layout, Stage 2, BTM Layout,Bangalore">Mico Layout, Stage 2, BTM Layout,Bangalore</option>
+                        <option value="Moulali, Kolkata">Moulali, Kolkata</option>
+                        <option value="Mumbai Central">Mumbai Central</option>
+                        <option value="Nathan Road, Mangaldas Road, Pune">Nathan Road, Mangaldas Road, Pune</option>
+                        <option value="Pune University">Pune University</option>
+                        <option value="Raja Bazar, Kolkata">Raja Bazar, Kolkata</option>
+                        <option value="Rmz Centennial, I Gate, Whitefield">Rmz Centennial, I Gate, Whitefield</option>
+                        <option value="Sandhurst Road, Mumbai CST Area">Sandhurst Road, Mumbai CST Area</option>
+                        <option value="Sector 1, Noida">Sector 1, Noida</option>
+                        <option value="Sector 14, Noida">Sector 14, Noida</option>
+                        <option value="Sector 3, Marathalli">Sector 3, Marathalli</option>
+                        <option value="Sector 63A,Gurgaon">Sector 63A,Gurgaon</option>
+                        <option value="Tejas Nagar Colony, Wadala West, Mumbai">Tejas Nagar Colony, Wadala West, Mumbai</option>
+                        <option value="Tiretti, Kolkata">Tiretti, Kolkata</option>
+                        <option value="Yerawada, Pune, Maharashtra">Yerawada, Pune, Maharashtra</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cuisines (max 5)</label>
+                    <select class="form-control" id="cuisines" name="cuisines" multiple required>
+                        <option value="Afghan">Afghan</option>
+                        <option value="African">African</option>
+                        <option value="American">American</option>
+                        <option value="Andhra">Andhra</option>
+                        <option value="Arabian">Arabian</option>
+                        <option value="Asian">Asian</option>
+                        <option value="Assamese">Assamese</option>
+                        <option value="Awadhi">Awadhi</option>
+                        <option value="BBQ">BBQ</option>
+                        <option value="Bakery">Bakery</option>
+                        <option value="Bangladeshi">Bangladeshi</option>
+                        <option value="Bar Food">Bar Food</option>
+                        <option value="Belgian">Belgian</option>
+                        <option value="Bengali">Bengali</option>
+                        <option value="Beverages">Beverages</option>
+                        <option value="Bihari">Bihari</option>
+                        <option value="Biryani">Biryani</option>
+                        <option value="Bohri">Bohri</option>
+                        <option value="Brazilian">Brazilian</option>
+                        <option value="Bubble Tea">Bubble Tea</option>
+                        <option value="Burger">Burger</option>
+                        <option value="Burmese">Burmese</option>
+                        <option value="Cafe">Cafe</option>
+                        <option value="Cantonese">Cantonese</option>
+                        <option value="Charcoal Chicken">Charcoal Chicken</option>
+                        <option value="Chettinad">Chettinad</option>
+                        <option value="Chinese">Chinese</option>
+                        <option value="Coffee">Coffee</option>
+                        <option value="Continental">Continental</option>
+                        <option value="Desserts">Desserts</option>
+                        <option value="European">European</option>
+                        <option value="Fast Food">Fast Food</option>
+                        <option value="Finger Food">Finger Food</option>
+                        <option value="French">French</option>
+                        <option value="Frozen Yogurt">Frozen Yogurt</option>
+                        <option value="German">German</option>
+                        <option value="Goan">Goan</option>
+                        <option value="Greek">Greek</option>
+                        <option value="Gujarati">Gujarati</option>
+                        <option value="Healthy Food">Healthy Food</option>
+                        <option value="Hot dogs">Hot dogs</option>
+                        <option value="Hyderabadi">Hyderabadi</option>
+                        <option value="Ice Cream">Ice Cream</option>
+                        <option value="Indian">Indian</option>
+                        <option value="Indonesian">Indonesian</option>
+                        <option value="Iranian">Iranian</option>
+                        <option value="Israeli">Israeli</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Japanese">Japanese</option>
+                        <option value="Juices">Juices</option>
+                        <option value="Kashmiri">Kashmiri</option>
+                        <option value="Kebab">Kebab</option>
+                        <option value="Kerala">Kerala</option>
+                        <option value="Konkan">Konkan</option>
+                        <option value="Korean">Korean</option>
+                        <option value="Lebanese">Lebanese</option>
+                        <option value="Lucknowi">Lucknowi</option>
+                        <option value="Maharashtrian">Maharashtrian</option>
+                        <option value="Malaysian">Malaysian</option>
+                        <option value="Malwani">Malwani</option>
+                        <option value="Mangalorean">Mangalorean</option>
+                        <option value="Mediterranean">Mediterranean</option>
+                        <option value="Mexican">Mexican</option>
+                        <option value="Middle Eastern">Middle Eastern</option>
+                        <option value="Mishti">Mishti</option>
+                        <option value="Mithai">Mithai</option>
+                        <option value="Modern Indian">Modern Indian</option>
+                        <option value="Momos">Momos</option>
+                        <option value="Mughlai">Mughlai</option>
+                        <option value="Naga">Naga</option>
+                        <option value="Nepalese">Nepalese</option>
+                        <option value="North Eastern">North Eastern</option>
+                        <option value="North Indian">North Indian</option>
+                        <option value="Odia">Odia</option>
+                        <option value="Paan">Paan</option>
+                        <option value="Parsi">Parsi</option>
+                        <option value="Pizza">Pizza</option>
+                        <option value="Poké">Poké</option>
+                        <option value="Portuguese">Portuguese</option>
+                        <option value="Rajasthani">Rajasthani</option>
+                        <option value="Raw Meats">Raw Meats</option>
+                        <option value="Roast Chicken">Roast Chicken</option>
+                        <option value="Rolls">Rolls</option>
+                        <option value="Salad">Salad</option>
+                        <option value="Sandwich">Sandwich</option>
+                        <option value="Seafood">Seafood</option>
+                        <option value="South American">South American</option>
+                        <option value="South Indian">South Indian</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="Sri Lankan">Sri Lankan</option>
+                        <option value="Steak">Steak</option>
+                        <option value="Street Food">Street Food</option>
+                        <option value="Sushi">Sushi</option>
+                        <option value="Tamil">Tamil</option>
+                        <option value="Tea">Tea</option>
+                        <option value="Tex-Mex">Tex-Mex</option>
+                        <option value="Thai">Thai</option>
+                        <option value="Tibetan">Tibetan</option>
+                        <option value="Turkish">Turkish</option>
+                        <option value="Vietnamese">Vietnamese</option>
+                        <option value="Wraps">Wraps</option>
+                    </select>
+                    <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple cuisines (maximum 5)</small>
+                </div>
+            </div>
+
+            <div class="row input-row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Average Cost (₹)</label>
+                        <input type="number" class="form-control" id="average_cost" name="average_cost" required min="0">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Minimum Order (₹)</label>
+                        <input type="number" class="form-control" id="minimum_order" name="minimum_order" required min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="row input-row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Rating</label>
+                        <input type="number" class="form-control" id="rating" name="rating" required min="1" max="5" step="0.1">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Votes</label>
+                        <input type="number" class="form-control" id="votes" name="votes" required min="0">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Reviews</label>
+                        <input type="number" class="form-control" id="reviews" name="reviews" required min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Predict Delivery Time</button>
+            </div>
+        </form>
+
+        <div id="loading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <div id="result" class="prediction-result" style="display: none;">
+            <h4 class="text-center">Prediction Results</h4>
+            <div class="alert alert-info text-center mb-4">
+                <h5 class="mb-0">Estimated Delivery Time: <span id="predicted_time"></span></h5>
+            </div>
+            <div class="model-predictions">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Prediction</th>
+                        </tr>
+                    </thead>
+                    <tbody id="model_predictions">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="model-accuracy mt-5">
+            <h4 class="text-center mb-4">Model Accuracy Comparison</h4>
+            <img src="/static/model_accuracy.png" alt="Model Accuracy Comparison" class="img-fluid rounded">
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Limit cuisine selection to 5
+            $('#cuisines').on('change', function() {
+                if ($(this).val().length > 5) {
+                    alert('You can select a maximum of 5 cuisines');
+                    $(this).val($(this).val().slice(0, 5));
+                }
+            });
+
+            // Form submission
+            $('#predictionForm').on('submit', function(e) {
+                e.preventDefault();
+                $('#loading').show();
+                $('#result').hide();
+
+                $.ajax({
+                    url: '/predict',
+                    method: 'POST',
+                    data: {
+                        location: $('#location').val(),
+                        cuisines: $('#cuisines').val().join(', '),
+                        average_cost: $('#average_cost').val(),
+                        minimum_order: $('#minimum_order').val(),
+                        rating: $('#rating').val(),
+                        votes: $('#votes').val(),
+                        reviews: $('#reviews').val()
+                    },
+                    success: function(response) {
+                        $('#predicted_time').text(response.predicted_time + ' minutes');
+                        
+                        let modelPredictions = '';
+                        for (const [model, pred] of Object.entries(response.model_predictions)) {
+                            modelPredictions += `
+                                <tr>
+                                    <td>${model.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
+                                    <td>${pred.time} minutes</td>
+                                </tr>`;
+                        }
+                        $('#model_predictions').html(modelPredictions);
+                        
+                        $('#loading').hide();
+                        $('#result').fadeIn();
+                    },
+                    error: function() {
+                        alert('Error making prediction. Please try again.');
+                        $('#loading').hide();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,169 +1,160 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import GradientBoostingRegressor
 import joblib
-import re
+import json
 
-def clean_numeric_value(value):
-    """Clean numeric values from the dataset"""
-    if pd.isna(value) or value == '-' or value == 'NEW':
-        return np.nan
-    if isinstance(value, str):
-        # Remove ₹ symbol and commas, convert to float
-        value = value.replace('₹', '').replace(',', '')
-        # Extract numeric part from strings like "30 minutes"
-        numeric_part = re.search(r'\d+', value)
-        if numeric_part:
-            return float(numeric_part.group())
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return np.nan
-
-def clean_data(df):
-    """Clean and preprocess the dataset"""
-    # Clean numeric columns
-    df['Average_Cost_for_Two'] = df['Average_Cost'].apply(clean_numeric_value)
-    df['Minimum_Order'] = df['Minimum_Order'].apply(clean_numeric_value)
-    df['Rating'] = df['Rating'].apply(clean_numeric_value)
-    df['Votes'] = df['Votes'].apply(clean_numeric_value)
-    df['Reviews'] = df['Reviews'].apply(clean_numeric_value)
-    
-    # Extract numeric delivery time
-    df['Delivery_Time'] = df['Delivery_Time'].apply(lambda x: float(x.split()[0]) if isinstance(x, str) else np.nan)
-    
-    # Fill missing values
-    df['Average_Cost_for_Two'] = df['Average_Cost_for_Two'].fillna(df['Average_Cost_for_Two'].median())
-    df['Rating'] = df['Rating'].fillna(df['Rating'].median())
-    df['Votes'] = df['Votes'].fillna(df['Votes'].median())
-    df['Reviews'] = df['Reviews'].fillna(df['Reviews'].median())
-    
-    return df
-
-def create_preprocessing_pipeline():
-    """Create the preprocessing pipeline for features"""
-    numeric_features = ['Average_Cost_for_Two', 'Rating', 'Votes', 'Reviews']
-    categorical_features = ['Location', 'Cuisines']
-    
-    numeric_transformer = StandardScaler()
-    categorical_transformer = OneHotEncoder(drop='first', handle_unknown='ignore')
-    
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
-        ])
-    
-    return preprocessor
-
-def train_best_model(data_path='data/code.csv'):
-    """Train the best performing model (Gradient Boosting)"""
-    # Load and clean data
-    df = pd.read_csv(data_path)
-    df = clean_data(df)
-    
-    # Prepare features and target
-    X = df[['Location', 'Cuisines', 'Average_Cost_for_Two', 'Rating', 'Votes', 'Reviews']]
-    y = df['Delivery_Time']
-    
-    # Remove rows with missing target values
-    mask = ~y.isna()
-    X = X[mask]
-    y = y[mask]
-    
-    # Create and train the pipeline
-    preprocessor = create_preprocessing_pipeline()
-    model = Pipeline([
-        ('preprocessor', preprocessor),
-        ('regressor', GradientBoostingRegressor(
-            n_estimators=100,
-            learning_rate=0.1,
-            max_depth=3,
-            random_state=42
-        ))
-    ])
-    
-    # Fit the model
-    model.fit(X, y)
-    
-    # Save the model
-    joblib.dump(model, 'models/best_delivery_model.joblib')
-    
-    return model
-
-def predict_delivery_time(restaurant_data, model=None):
-    """
-    Predict delivery time for a restaurant
-    
-    Parameters:
-    restaurant_data: dict with keys:
-        - Location: str
-        - Cuisines: str
-        - Average_Cost_for_Two: float (in ₹)
-        - Rating: float (1-5)
-        - Votes: int
-        - Reviews: int
-    model: pre-loaded model (optional)
-    
-    Returns:
-    float: Predicted delivery time in minutes
-    """
-    if model is None:
+class DeliveryPredictor:
+    def __init__(self):
         try:
-            model = joblib.load('models/best_delivery_model.joblib')
-        except:
-            model = train_best_model()
+            # Load all trained models
+            self.models = {
+                'logistic_regression': joblib.load('models/logistic_regression_model.joblib'),
+                'random_forest': joblib.load('models/random_forest_model.joblib'),
+                'xgboost': joblib.load('models/xgboost_model.joblib'),
+                'lightgbm': joblib.load('models/lightgbm_model.joblib'),
+                'svc': joblib.load('models/svc_model.joblib'),
+                'knn': joblib.load('models/knn_model.joblib'),
+                'decision_tree': joblib.load('models/decision_tree_model.joblib')
+            }
+            
+            # Map prediction indices to actual delivery times from data
+            self.time_mapping = {
+                0: 10,   # Fastest delivery
+                1: 20,   # Very fast delivery
+                2: 30,   # Fast delivery (most common)
+                3: 45,   # Medium delivery
+                4: 65,   # Slow delivery
+                5: 80,   # Very slow delivery
+                6: 120   # Extremely slow delivery
+            }
+            
+            print("Models loaded successfully")
+            
+        except Exception as e:
+            print(f"Error loading models: {str(e)}")
+            raise
     
-    # Convert input data to DataFrame
-    input_df = pd.DataFrame([restaurant_data])
+    def preprocess_input(self, input_data):
+        """Preprocess a single input for prediction."""
+        try:
+            # Convert input to DataFrame
+            if isinstance(input_data, dict):
+                input_data = pd.DataFrame([input_data])
+            
+            # Initialize processed data
+            processed_data = pd.DataFrame()
+            
+            # Clean monetary values
+            for col in ['Average_Cost', 'Minimum_Order']:
+                input_data[col] = input_data[col].astype(str).str.replace('₹', '').str.replace(',', '').astype(float)
+            
+            # Process cuisines
+            input_data['Cuisine_Count'] = input_data['Cuisines'].str.count(',') + 1
+            input_data['Has_North_Indian'] = input_data['Cuisines'].str.contains('North Indian', case=False, na=False).astype(int)
+            input_data['Has_South_Indian'] = input_data['Cuisines'].str.contains('South Indian', case=False, na=False).astype(int)
+            input_data['Has_Chinese'] = input_data['Cuisines'].str.contains('Chinese', case=False, na=False).astype(int)
+            input_data['Has_Fast_Food'] = input_data['Cuisines'].str.contains('Fast Food', case=False, na=False).astype(int)
+            
+            # Extract city and encode it
+            input_data['City'] = input_data['Location'].str.split(',').str[-1].str.strip()
+            input_data['City'] = input_data['City'].astype('category').cat.codes
+            
+            # Create price categories using fixed bins
+            bins = [0, 200, 500, float('inf')]
+            labels = ['Budget', 'Mid-range', 'Premium']
+            input_data['Price_Category'] = pd.cut(
+                input_data['Average_Cost'].astype(float),
+                bins=bins,
+                labels=labels,
+                include_lowest=True
+            )
+            input_data['Price_Category'] = input_data['Price_Category'].astype('category').cat.codes
+            
+            # Copy numeric columns directly
+            numeric_cols = ['Average_Cost', 'Minimum_Order', 'Rating', 'Votes', 'Reviews']
+            for col in numeric_cols:
+                processed_data[col] = input_data[col]
+            
+            # Copy categorical and feature columns
+            feature_cols = ['City', 'Cuisine_Count', 'Has_North_Indian', 'Has_South_Indian', 
+                          'Has_Chinese', 'Has_Fast_Food', 'Price_Category']
+            for col in feature_cols:
+                processed_data[col] = input_data[col]
+            
+            # Ensure all columns are float type
+            processed_data = processed_data.astype(float)
+            
+            print("\nProcessed features:")
+            print(processed_data.iloc[0].to_dict())
+            
+            return processed_data
+            
+        except Exception as e:
+            print(f"Error in preprocessing: {str(e)}")
+            raise
     
-    # Make prediction
-    predicted_time = model.predict(input_df)[0]
-    
-    return round(predicted_time, 2)
+    def predict(self, input_data):
+        """Make predictions using all models and return numerical delivery time."""
+        try:
+            # Preprocess input
+            processed_data = self.preprocess_input(input_data)
+            
+            # Make predictions with each model
+            predictions = []
+            raw_predictions = {}
+            
+            for model_name, model in self.models.items():
+                try:
+                    # Get raw prediction index
+                    pred_idx = model.predict(processed_data)[0]
+                    # Convert to actual delivery time
+                    pred_time = self.time_mapping.get(pred_idx, 45)  # Default to 45 if unknown
+                    predictions.append(pred_time)
+                    raw_predictions[model_name] = {
+                        'index': int(pred_idx),
+                        'time': pred_time
+                    }
+                except Exception as e:
+                    print(f"Error in model {model_name} prediction: {str(e)}")
+            
+            if not predictions:
+                raise ValueError("All models failed to make predictions")
+            
+            print("\nModel predictions:")
+            for model_name, pred in raw_predictions.items():
+                print(f"{model_name}: Class {pred['index']} -> {pred['time']} minutes")
+            
+            # Take the most common prediction (mode)
+            predicted_time = max(set(predictions), key=predictions.count)
+            print(f"\nFinal prediction: {predicted_time} minutes")
+            
+            return {
+                'predicted_time': predicted_time,
+                'model_predictions': raw_predictions
+            }
+            
+        except Exception as e:
+            print(f"Error in prediction: {str(e)}")
+            raise
 
-if __name__ == "__main__":
+def main():
     # Example usage
-    sample_restaurant = {
-        'Location': 'Sector 1, Noida',
-        'Cuisines': 'North Indian, Chinese',
-        'Average_Cost_for_Two': 250,
-        'Rating': 4.5,
-        'Votes': 100,
-        'Reviews': 50
+    predictor = DeliveryPredictor()
+    
+    # Test with the example case
+    test_data = {
+        'Location': 'FTI College, Law College Road, Pune',
+        'Cuisines': 'Fast Food, Rolls, Burger, Salad, Wraps',
+        'Average_Cost': 200,
+        'Minimum_Order': 50,
+        'Rating': 3.5,
+        'Votes': 12,
+        'Reviews': 4
     }
     
-    # Train and save the model
-    print("\nTraining the model...")
-    model = train_best_model()
-    
-    # Make a prediction
-    predicted_time = predict_delivery_time(sample_restaurant, model)
-    print(f"\nPredicted Delivery Time: {predicted_time} minutes")
-    
-    # Calculate and display model performance metrics
-    df = pd.read_csv('data/code.csv')
-    df = clean_data(df)
-    
-    # Prepare test data
-    X_test = df[['Location', 'Cuisines', 'Average_Cost_for_Two', 'Rating', 'Votes', 'Reviews']]
-    y_test = df['Delivery_Time']
-    mask = ~y_test.isna()
-    X_test = X_test[mask]
-    y_test = y_test[mask]
-    
-    # Make predictions on test data
-    y_pred = model.predict(X_test)
-    
-    # Calculate metrics
-    mae = np.mean(np.abs(y_test - y_pred))
-    rmse = np.sqrt(np.mean((y_test - y_pred) ** 2))
-    accuracy = 100 * (1 - mae / np.mean(y_test))
-    
-    print("\nModel Performance Metrics:")
-    print(f"- Accuracy: {accuracy:.2f}%")
-    print(f"- Mean Absolute Error: {mae:.2f} minutes")
-    print(f"- Root Mean Square Error: {rmse:.2f} minutes") 
+    # Make prediction
+    prediction = predictor.predict(test_data)
+    print("\nTest case prediction:", prediction['predicted_time'], "minutes")
+
+if __name__ == "__main__":
+    main() 

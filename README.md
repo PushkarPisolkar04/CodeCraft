@@ -1,106 +1,125 @@
-# Delivery Time Prediction Project
+# Food Delivery Time Predictor
 
-This project predicts food delivery times based on various restaurant and order features using machine learning.
+A machine learning-powered web application that predicts food delivery times based on various factors like location, cuisine type, cost, and restaurant ratings.
 
-## Project Structure
+## 🌟 Features
+
+- Location-based delivery time prediction
+- Multiple cuisine selection (up to 5 cuisines)
+- Real-time predictions using multiple ML models
+- Interactive web interface
+- Model accuracy comparison visualization
+- Responsive design for all devices
+
+## 🚀 Live Demo
+
+Visit the live application: [Food Delivery Time Predictor](https://your-vercel-url.vercel.app)
+
+## 🛠️ Tech Stack
+
+- **Frontend**: HTML, CSS, JavaScript, Bootstrap 5
+- **Backend**: Flask (Python)
+- **Machine Learning**: scikit-learn, XGBoost, LightGBM
+- **Deployment**: Vercel
+
+## 📊 Machine Learning Models
+
+The application uses multiple models for prediction:
+- Random Forest
+- XGBoost
+- LightGBM
+- Decision Tree
+- K-Nearest Neighbors
+- Support Vector Machine
+
+## 🏗️ Project Structure
 
 ```
 .
+├── api/
+│   └── index.py          # Main Flask application
 ├── data/
-│   └── delivery_data.csv
-├── models/
-│   ├── delivery_time_model.joblib
-│   └── feature_names.joblib
-├── src/
-│   ├── static/
-│   │   └── script.js
-│   ├── templates/
-│   │   └── index.html
-│   ├── app.py
-│   └── train_model.py
-└── requirements.txt
+│   ├── code.csv          # Training data
+│   └── test.csv          # Test data
+├── models/               # Trained ML models
+├── src/                  # Source code
+├── static/              # Static files
+├── templates/           # HTML templates
+├── requirements.txt     # Python dependencies
+└── vercel.json         # Vercel configuration
 ```
 
-## Setup Instructions
+## 🚀 Getting Started
 
-1. Create a virtual environment (recommended):
+### Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package manager)
+
+### Local Development
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/food-delivery-predictor.git
+   cd food-delivery-predictor
+   ```
+
+2. Create and activate virtual environment:
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-2. Install dependencies:
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Place your dataset:
-   - Put your delivery dataset as `delivery_data.csv` in the `data/` directory
-   - Required columns: Restaurant_ID, Location, Cuisines, Average_Cost_for_Two, Rating, Votes, Delivery_Time
-
-## Training the Model
-
-1. Train the model by running:
+4. Run the application:
    ```bash
-   python src/train_model.py
+   python api/index.py
    ```
-   This will:
-   - Load and preprocess the data
-   - Train a Random Forest model
-   - Save the model and feature names to the `models/` directory
-   - Print model performance metrics
 
-## Running the Application
+5. Open http://localhost:5000 in your browser
 
-1. Start the Flask backend:
+### 🌐 Deployment
+
+The application is configured for deployment on Vercel:
+
+1. Install Vercel CLI:
    ```bash
-   python src/app.py
+   npm i -g vercel
    ```
-   The API will be available at `http://localhost:5000`
 
-2. Open `src/templates/index.html` in your web browser to use the prediction interface
+2. Deploy:
+   ```bash
+   vercel
+   ```
 
-## API Endpoints
+## 📈 Model Performance
 
-- `POST /predict`: Make a delivery time prediction
-  - Input JSON format:
-    ```json
-    {
-        "average_cost": 500,
-        "rating": 4.5,
-        "votes": 1000,
-        "location": "Downtown",
-        "cuisines": "Italian"
-    }
-    ```
-  - Returns predicted delivery time in minutes
+The application includes a visualization of model accuracy comparisons. View this in the web interface to understand how different models perform.
 
-- `GET /health`: Health check endpoint
+## 🤝 Contributing
 
-## Model Features
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-The model uses the following features:
-- Average Cost for Two (numerical)
-- Rating (numerical, 0-5)
-- Votes (numerical)
-- Location (categorical)
-- Cuisines (categorical)
+## 📝 License
 
-## Deployment (Optional)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-To deploy the application:
+## 🙏 Acknowledgments
 
-1. Backend:
-   - Deploy the Flask application to a cloud service (e.g., Heroku, AWS, or Render)
-   - Update the API URL in `src/static/script.js` to point to your deployed backend
+- Dataset source: [mention source if applicable]
+- Contributors and maintainers
+- Open source community
 
-2. Frontend:
-   - Host the static files (HTML, JS) on a static hosting service
-   - Or serve them through the same backend server
+## 📧 Contact
 
-## Notes
+Your Name - your.email@example.com
 
-- The model uses Random Forest Regression for predictions
-- Categorical variables are encoded using One-Hot Encoding
-- Numerical variables are scaled using StandardScaler
-- Missing values are handled by filling with median (numerical) or mode (categorical) 
+Project Link: [https://github.com/your-username/food-delivery-predictor](https://github.com/your-username/food-delivery-predictor) 
