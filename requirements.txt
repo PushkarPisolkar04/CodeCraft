@@ -12,4 +12,5 @@ folium==0.14.0
 xgboost==1.7.6
 lightgbm==4.0.0
 gunicorn==21.2.0
-Werkzeug==2.3.7 
+Werkzeug==2.3.7
+--only-binary=:all: 
