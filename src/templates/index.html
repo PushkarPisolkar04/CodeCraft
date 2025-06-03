@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Time Feature Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .feature-card {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .importance-bar {
+            height: 24px;
+            background-color: #007bff;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .correlation-bar {
+            height: 24px;
+            background-color: #28a745;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .prediction-form {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .prediction-result {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .result-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Delivery Time Feature Analysis</h1>
+
+        <!-- Prediction Form -->
+        <div class="feature-card">
+            <h2>Predict Delivery Time</h2>
+            <form id="predictionForm" class="prediction-form">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="average_cost" class="form-label">Average Cost for Two (₹)</label>
+                        <input type="number" class="form-control" id="average_cost" required
+                               min="{{ feature_ranges.average_cost.min }}" 
+                               max="{{ feature_ranges.average_cost.max }}"
+                               value="{{ feature_ranges.average_cost.median }}">
+                        <div class="form-text">Range: ₹{{ feature_ranges.average_cost.min }} - ₹{{ feature_ranges.average_cost.max }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="minimum_order" class="form-label">Minimum Order (₹)</label>
+                        <input type="number" class="form-control" id="minimum_order" required
+                               min="{{ feature_ranges.minimum_order.min }}"
+                               max="{{ feature_ranges.minimum_order.max }}"
+                               value="{{ feature_ranges.minimum_order.median }}">
+                        <div class="form-text">Range: ₹{{ feature_ranges.minimum_order.min }} - ₹{{ feature_ranges.minimum_order.max }}</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="rating" class="form-label">Rating (0-5)</label>
+                        <input type="number" class="form-control" id="rating" required
+                               min="{{ feature_ranges.rating.min }}"
+                               max="{{ feature_ranges.rating.max }}"
+                               step="0.1"
+                               value="{{ feature_ranges.rating.median }}">
+                        <div class="form-text">Range: {{ feature_ranges.rating.min }} - {{ feature_ranges.rating.max }}</div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="votes" class="form-label">Number of Votes</label>
+                        <input type="number" class="form-control" id="votes" required
+                               min="{{ feature_ranges.votes.min }}"
+                               max="{{ feature_ranges.votes.max }}"
+                               value="{{ feature_ranges.votes.median }}">
+                        <div class="form-text">Range: {{ feature_ranges.votes.min }} - {{ feature_ranges.votes.max }}</div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="reviews" class="form-label">Number of Reviews</label>
+                        <input type="number" class="form-control" id="reviews" required
+                               min="{{ feature_ranges.reviews.min }}"
+                               max="{{ feature_ranges.reviews.max }}"
+                               value="{{ feature_ranges.reviews.median }}">
+                        <div class="form-text">Range: {{ feature_ranges.reviews.min }} - {{ feature_ranges.reviews.max }}</div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary">Predict Delivery Time</button>
+                </div>
+            </form>
+            <div id="predictionResult" class="prediction-result"></div>
+        </div>
+
+        <!-- Feature Importance Section -->
+        <div class="feature-card bg-light">
+            <h2>Feature Importance Analysis</h2>
+            <div id="importanceChart"></div>
+        </div>
+
+        <!-- Feature Correlations Section -->
+        <div class="feature-card bg-light">
+            <h2>Feature Correlations with Delivery Time</h2>
+            <div id="correlationChart"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Parse the importance data
+        const importanceData = JSON.parse('{{ importance_data | safe }}');
+        
+        // Function to create a bar chart
+        function createBarChart(data, containerId, colorClass) {
+            const container = document.getElementById(containerId);
+            const items = Object.entries(data).sort((a, b) => b[1] - a[1]);
+            const maxValue = Math.max(...items.map(item => Math.abs(item[1])));
+            
+            items.forEach(([feature, value]) => {
+                const row = document.createElement('div');
+                row.className = 'mb-3';
+                
+                const label = document.createElement('div');
+                label.className = 'mb-1';
+                label.textContent = `${feature}: ${Math.abs(value).toFixed(3)}`;
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'bg-light';
+                barContainer.style.width = '100%';
+                
+                const bar = document.createElement('div');
+                bar.className = colorClass;
+                bar.style.width = `${(Math.abs(value) / maxValue) * 100}%`;
+                
+                barContainer.appendChild(bar);
+                row.appendChild(label);
+                row.appendChild(barContainer);
+                container.appendChild(row);
+            });
+        }
+        
+        // Create the charts
+        createBarChart(importanceData.numeric, 'importanceChart', 'importance-bar');
+        createBarChart(importanceData.correlations, 'correlationChart', 'correlation-bar');
+
+        // Handle form submission
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                average_cost: document.getElementById('average_cost').value,
+                minimum_order: document.getElementById('minimum_order').value,
+                rating: document.getElementById('rating').value,
+                votes: document.getElementById('votes').value,
+                reviews: document.getElementById('reviews').value
+            };
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                const resultDiv = document.getElementById('predictionResult');
+                
+                if (result.success) {
+                    resultDiv.className = 'prediction-result result-success';
+                    resultDiv.textContent = `Predicted Delivery Time: ${result.predicted_time} minutes`;
+                } else {
+                    resultDiv.className = 'prediction-result result-error';
+                    resultDiv.textContent = `Error: ${result.error}`;
+                }
+                
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                const resultDiv = document.getElementById('predictionResult');
+                resultDiv.className = 'prediction-result result-error';
+                resultDiv.textContent = `Error: ${error.message}`;
+                resultDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,130 @@
+[
+    {
+        "model_name": "Gradient Boosting",
+        "mae": 1.94,
+        "rmse": 1.94,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 94.46,
+        "cv_scores": [
+            0.7535,
+            0.2656,
+            -0.5596,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "Random Forest",
+        "mae": 2.4,
+        "rmse": 2.47,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 93.13,
+        "cv_scores": [
+            0.3482,
+            -0.884,
+            -0.6885,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "Linear Regression",
+        "mae": 3.09,
+        "rmse": 3.75,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 91.16,
+        "cv_scores": [
+            0.5281,
+            -2.7149,
+            -0.7909,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "Decision Tree",
+        "mae": 4.0,
+        "rmse": 4.12,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 88.57,
+        "cv_scores": [
+            0.4694,
+            -4.7778,
+            -0.6694,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "K-Nearest Neighbors",
+        "mae": 4.3,
+        "rmse": 4.31,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 87.71,
+        "cv_scores": [
+            -0.0661,
+            -4.1289,
+            -1.1481,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "LightGBM",
+        "mae": 4.5,
+        "rmse": 4.5,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 87.14,
+        "cv_scores": [
+            -0.5805,
+            -0.7901,
+            -0.9403,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "Support Vector Machine",
+        "mae": 4.9,
+        "rmse": 4.9,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 85.99,
+        "cv_scores": [
+            0.123,
+            -4.7884,
+            -0.9792,
+            NaN,
+            NaN
+        ]
+    },
+    {
+        "model_name": "XGBoost",
+        "mae": 4.99,
+        "rmse": 5.82,
+        "r2_score": 0.0,
+        "cv_mean": NaN,
+        "cv_std": NaN,
+        "accuracy_percentage": 85.74,
+        "cv_scores": [
+            0.6688,
+            -10.7676,
+            -0.6204,
+            NaN,
+            NaN
+        ]
+    }
+]
