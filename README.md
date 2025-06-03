@@ -13,7 +13,7 @@ A machine learning-powered web application that predicts food delivery times bas
 
 ## 🚀 Live Demo
 
-Visit the live application: [Food Delivery Time Predictor](https://your-vercel-url.vercel.app)
+Visit the live application: [Food Delivery Time Predictor](https://code-craft-orcin-seven.vercel.app)
 
 ## 🛠️ Tech Stack
 
@@ -21,6 +21,33 @@ Visit the live application: [Food Delivery Time Predictor](https://your-vercel-u
 - **Backend**: Flask (Python)
 - **Machine Learning**: scikit-learn, XGBoost, LightGBM
 - **Deployment**: Vercel
+
+## 🚀 Installation Steps
+
+1. Clone the repository:
+```bash
+git clone https://github.com/PushkarPisolkar04/CodeCraft.git
+cd CodeCraft
+```
+
+2. Create virtual environment:
+```bash
+python -m venv venv
+venv\Scripts\activate  # For Windows
+source venv/bin/activate  # For Linux/Mac
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Run the application:
+```bash
+python app.py
+```
+
+5. Open http://localhost:5000 in your browser
 
 ## 📊 Machine Learning Models
 
