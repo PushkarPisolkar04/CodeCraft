@@ -19,7 +19,7 @@ Visit the live application: [Food Delivery Time Predictor](https://code-craft-or
 
 - **Frontend**: HTML, CSS, JavaScript, Bootstrap 5
 - **Backend**: Flask (Python)
-- **Machine Learning**: scikit-learn, XGBoost, LightGBM, RandomForestGenerator
+- **Machine Learning**: scikit-learn, XGBoost, LightGBM, RandomForestGenerator, DecisionTree
 - **Deployment**: Vercel
 
 ## 🚀 Installation Steps
