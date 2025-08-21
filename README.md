@@ -1,6 +1,10 @@
 # Food Delivery Time Predictor
 
-A machine learning-powered web application that predicts food delivery times based on various factors like location, cuisine type, cost, and restaurant ratings.
+A machine learning-powered web application that predicts food delivery times based on various factors like location, cuisine type, cost, and restaurant ratings. This project was developed for the CodeCraft competition at Bajaj Institute of Technology, Wardha.
+
+## 🏆 Competition Achievement
+
+**🏅 2nd Place Winner** - Our team secured the 2nd position in the CodeCraft competition at Bajaj Institute of Technology, Wardha. We lost by just 1 mark, making it an incredibly close competition!
 
 ## 🌟 Features
 
@@ -11,16 +15,11 @@ A machine learning-powered web application that predicts food delivery times bas
 - Model accuracy comparison visualization
 - Responsive design for all devices
 
-## 🚀 Live Demo
-
-Visit the live application: [Food Delivery Time Predictor](https://code-craft-orcin-seven.vercel.app)
-
 ## 🛠️ Tech Stack
 
 - **Frontend**: HTML, CSS, JavaScript, Bootstrap 5
 - **Backend**: Flask (Python)
 - **Machine Learning**: scikit-learn, XGBoost, LightGBM, RandomForestGenerator, DecisionTree
-- **Deployment**: Vercel
 
 ## 🚀 Installation Steps
 
